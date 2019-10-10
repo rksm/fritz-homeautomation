@@ -94,6 +94,33 @@
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+(s/def ::features (s/coll-of (set (keys features-bits)) :kind set?))
+(s/def ::energy-usage-in-wh (s/and number? #(>= % 0)))
+(s/def ::voltage (s/and number? #(>= % 0)))
+(s/def ::watts (s/and number? #(>= % 0)))
+(s/def ::celsius (s/and number? #(< -273 % 100)))
+(s/def ::lock (s/nilable boolean?))
+(s/def ::devicelock (s/nilable boolean?))
+(s/def ::state (s/nilable boolean?))
+(s/def ::present (s/nilable boolean?))
+(s/def ::battery-low? (s/nilable boolean?))
+(s/def ::battery (s/nilable string?))
+(s/def ::alert (s/nilable boolean))
+(s/def ::mode #{:auto :manuell})
+(s/def ::id string?)
+(s/def ::identifier string?)
+(s/def ::name string?)
+(s/def ::productname string?)
+(s/def ::firmware-version string?)
+(s/def ::manufacturer #{"AVM"})
+
+(s/def ::device (s/keys :req-un [::id ::identifier ::name ::productname ::manufacturer
+                                 ::mode ::state ::features]
+                        :opt-un [::lock ::firmware-version ::present ::devicelock
+                                 ::alert
+                                 ::celsius
+                                 ::energy-usage-in-wh ::voltage ::watts]))
+
 (defn zero-one-nil? [val]
   (case val
     "0" false
@@ -149,74 +176,62 @@
         (rename-keys {:fwversion :firmware-version}))))
 
 
-;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
 (defn fetch-device-list [sid]
   (process-device-infos (req "getdevicelistinfos" sid)))
 
+(s/fdef fetch-device-stats
+  :ret (s/coll-of ::device))
+
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-(defn fetch-device-stats [sid ain]
+(s/def ::unit #{:watts :volt :celsius :kwH})
+(s/def ::stat-values (s/coll-of number?))
+(s/def ::interval-seconds (s/and int? #(> % 0)))
+(s/def ::stat-count (s/and int? #(>= % 0)))
+(s/def ::stats (s/keys :opt-un [::interval-seconds ::stat-count ::stat-values ::unit]))
+(s/def ::temperature-stats (s/coll-of ::stats))
+(s/def ::energy-stats (s/coll-of ::stats))
+(s/def ::power-stats (s/coll-of ::stats))
+(s/def ::voltage-stats (s/coll-of ::stats))
+(s/def ::device-stats (s/keys :opt-un [::temperature-stats ::energy-stats ::power-stats ::voltage-stats]))
+
+(defn fetch-device-stats
+  [sid ain]
   (let [xml (req "getbasicdevicestats" sid ain)
-        stats-map {:temperatures "/devicestats/temperature/stats"
-                   :energy "/devicestats/energy/stats"
-                   :power "/devicestats/power/stats"
-                   :voltage "/devicestats/voltage/stats"}]
-    (into {} (for [[key path] stats-map]
+        stats-map {:temperature-stats {:path "/devicestats/temperature/stats" :unit :celsius :convert #(-> % Float/parseFloat (* 0.1))}
+                   :energy-stats {:path "/devicestats/energy/stats" :unit :kwH}
+                   :power-stats {:path "/devicestats/power/stats" :unit :watts :convert #(-> % Float/parseFloat (* 0.01))}
+                   :voltage-stats {:path "/devicestats/voltage/stats" :unit :volt :convert #(-> % Float/parseFloat (* 0.001))}}]
+    (into {} (for [[key {:keys [path unit convert]}] stats-map]
                (let [values (xpath/$x:text* path xml)
                      attrs (xpath/$x:attrs* path xml)]
                  [key (map (fn [vals {:keys [count grid]}]
                              {:interval-seconds (Integer/parseInt grid)
-                              :count (Integer/parseInt count)
-                              :values (->> (string/split vals #",")
-                                           (take-while #(re-find #"[0-9]+" %))
-                                           (map #(Integer/parseInt %)))})
+                              :unit unit
+                              :stat-count (Integer/parseInt count)
+                              :stat-values (->> (string/split vals #",")
+                                                (take-while #(re-find #"[0-9]+" %))
+                                                (map #(if (fn? convert) (convert %) (Integer/parseInt %))))})
                            values attrs)])))))
 
+(s/fdef fetch-device-stats
+    :ret ::device-stats)
+
+(comment
+   (def device-stats (fetch-device-stats sid (-> devices first :identifier)))
+   (s/explain ::device-stats device-stats)
+   (s/conform ::device-stats device-stats)
+  )
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-(s/def ::features (s/coll-of (set (keys features-bits)) :kind set?))
-(s/def ::energy-usage-in-wh (s/and number? #(>= % 0)))
-(s/def ::voltage (s/and number? #(>= % 0)))
-(s/def ::watts (s/and number? #(>= % 0)))
-(s/def ::celsius (s/and number? #(< -273 % 100)))
-(s/def ::lock (s/nilable boolean?))
-(s/def ::devicelock (s/nilable boolean?))
-(s/def ::state (s/nilable boolean?))
-(s/def ::present (s/nilable boolean?))
-(s/def ::battery-low? (s/nilable boolean?))
-(s/def ::battery (s/nilable string?))
-(s/def ::alert (s/nilable boolean))
-(s/def ::mode #{:auto :manuell})
-(s/def ::id string?)
-(s/def ::identifier string?)
-(s/def ::name string?)
-(s/def ::productname string?)
-(s/def ::firmware-version string?)
-(s/def ::manufacturer #{"AVM"})
-
-(s/def ::device (s/keys :req-un [::id ::identifier ::name ::productname ::manufacturer
-                                 ::mode ::state ::features]
-                        :opt-un [::lock ::firmware-version ::present ::devicelock
-                                 ::alert
-                                 ::celsius
-                                 ::energy-usage-in-wh ::voltage ::watts]))
-
-
 
 
 (comment
 
-    (def sid (get-sid "admin" "down8406"))
+  (def sid (get-sid "admin" "down8406"))
+  (check-sid sid)
 
-  (do
-    (check-sid sid)
-
-    (let [xml (req "getdevicelistinfos" sid)
-          devices (process-device-infos xml)]
-      (def devices devices)
-      (def device (first devices))))
+  (def devices (fetch-device-list sid))
 
   (count devices)
   (spit "test-2.xml" (req "getdevicelistinfos" sid))
@@ -230,38 +245,41 @@
         response (client/get url)]
     response)
 
-   (req "getbasicdevicestats" sid (:identifier device))
+  (s/explain ::temperatures (:temperatures device-stats))
+  (s/explain (s/cat :interval-seconds int? :count int? :values (s/coll-of float?))
+             (first (:temperatures device-stats)))
 
-   (fetch-device-stats sid (-> devices second :identifier))
-   (fetch-device-stats sid (-> devices first :identifier))
+  (fetch-device-stats sid (-> devices second :identifier))
 
-   (xpath/$x:text* "/devicestats/energy/stats" stats)
-   (xpath/$x:attrs* "/devicestats/energy/stats" stats)
+  (xpath/$x:text* "/devicestats/energy/stats" stats)
+  (xpath/$x:attrs* "/devicestats/energy/stats" stats)
 
-   (xpath/$x "/devicestats/temperature" stats)
-   ;; in mW
-   (req "getswitchpower" sid (:identifier device))
-   ;; in wH
-   (req "getswitchenergy" sid (:identifier (first devices)))
-   (req "getswitchenergy" sid (:identifier (second devices)))
-   (req "getswitchname" sid (:identifier device))
-   (req "gettemplatelistinfos" sid)
+  (xpath/$x "/devicestats/temperature" stats)
+  ;; in mW
+  (req "getswitchpower" sid (:identifier device))
+  ;; in wH
+  (req "getswitchenergy" sid (:identifier (first devices)))
+  (req "getswitchenergy" sid (:identifier (second devices)))
+  (req "getswitchname" sid (:identifier device))
+  (req "gettemplatelistinfos" sid)
 
 
-   (-> devices second :identifier)
-   (def other-lamp "116570272633")
-   (req "setswitchoff" sid other-lamp)
-   (req "setswitchon" sid other-lamp)
-   (req "setswitchtoggle" sid other-lamp)
+  (-> devices second :identifier)
+  (def other-lamp "116570272633")
+  (req "setswitchoff" sid other-lamp)
+  (req "setswitchon" sid other-lamp)
+  (req "setswitchtoggle" sid other-lamp)
 
-   ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+  ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-   (s/explain ::device device)
+  (s/explain ::device device)
   (s/conform ::device device)
 
-(require '[clojure.spec.gen.alpha :as gen])
+  (require '[clojure.spec.gen.alpha :as gen])
 
-(gen/generate (s/gen ::device))
+  (gen/generate (s/gen ::device))
+  (gen/generate (s/gen ::device-stats))
+
   ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
   )
