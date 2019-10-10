@@ -1,0 +1,17 @@
+{:deps {com.rpl/specter {:mvn/version "1.1.2"}
+        clj-http {:mvn/version "3.10.0"}
+        org.clojure/data.xml {:mvn/version "0.2.0-alpha6"}
+        com.github.kyleburton/clj-xpath {:mvn/version "1.4.11"}
+        org.clojure/test.check {:mvn/version "0.10.0"}}
+ :paths ["src" "resources"]
+ :aliases {:test {:extra-paths ["test"]
+                  :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                          :sha "209b64504cb3bd3b99ecfec7937b358a879f55c1"}}
+                  :main-opts ["-m" "cognitect.test-runner"]}
+           :nrepl {:extra-paths ["dev"]
+                   :extra-deps {nrepl {:mvn/version "RELEASE"}
+                                vvvvalvalval/scope-capture {:mvn/version "RELEASE"}
+                                philoskim/debux {:mvn/version "RELEASE"}
+                                cider/piggieback {:mvn/version "RELEASE"}
+                                cider/cider-nrepl {:mvn/version "0.22.4"}
+                                refactor-nrepl {:mvn/version "2.5.0-SNAPSHOT"}}}}}
