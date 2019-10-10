@@ -1,0 +1,37 @@
+* login and session id
+- via https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AVM_Technical_Note_-_Session_ID.pdf
+- <iswriteaccess> 0 = request new session id
+
+#+begin_src sh :results scalar drawer replace output 
+curl http://192.168.178.1/login_sid.lua
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+<?xml version="1.0" encoding="utf-8"?><SessionInfo><SID>0000000000000000</SID><Challenge>63233c3d</Challenge><BlockTime>0</BlockTime><Rights></Rights></SessionInfo>
+:END:
+
+#+begin_src lang
+
+#+end_src
+<form action=“../cgi-bin/webcm/“ …>
+ …
+ <input type=“password“ name=“login:command/response“ value=“response“>
+ </form> 
+
+
+** Ermittlung des Response-Wertes 
+Beim neuen Login-Verfahren wird also das Klartextpasswort
+ login:command/password=<klartextpassword>
+ersetzt durch
+ login:command/response=<response>
+
+- <response> = <challenge>-<md5>
+- <challenge> from login_sid.xml or login_sid.lua
+- <md5> (32 Hexzeichen mit Kleinbuchstaben) is <challenge>-<klartextpassword>
+- MD5-Hash: Bytefolge UTF-16LE-Codierung of that string (no BOM  or 0-Byte)
+- every char with Unicode Codepoint > 255: "."-Zeichens benutzt werden (0x2e 0x00 in UTF-16LE)
+- Example:
+  - <challenge> = "1234567z"
+  - <klartextpassword> = "äbc"
+  - <response> = "1234567z-9e224a41eeefa284df7bb0f26c2913e2"
