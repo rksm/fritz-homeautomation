@@ -12,7 +12,6 @@
            java.util.Base64))
 
 
-
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 (defn md5 [^String s]
@@ -228,16 +227,24 @@
 
 (comment
 
-  (def sid (get-sid "admin" "down8406"))
-  (check-sid sid)
-
-  (def devices (fetch-device-list sid))
+  (do
+    (def sid (get-sid "admin" "down8406"))
+    (check-sid sid)
+    (def devices (fetch-device-list sid))
+    (def device (first devices)))
 
   (count devices)
   (spit "test-2.xml" (req "getdevicelistinfos" sid))
   (spit "test-3.xml" stats)
 
   ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+  (require 'clojure.contrib.humanize)
+  (clojure.contrib.humanize/duration (* 2678400 1000))
+  (clojure.contrib.humanize/duration (* 86400 1000))
+  (clojure.contrib.humanize/duration (* 900 1000))
+stats
+
 
   (let [cmd "getswitchlist"
         url (format "http://fritz.box/webservices/homeautoswitch.lua?switchcmd=%s&sid=%s" cmd sid)
@@ -249,14 +256,17 @@
   (s/explain (s/cat :interval-seconds int? :count int? :values (s/coll-of float?))
              (first (:temperatures device-stats)))
 
-  (fetch-device-stats sid (-> devices second :identifier))
+  (def stats (fetch-device-stats sid (-> devices second :identifier)))
+  (def stats (fetch-device-stats sid (-> devices first :identifier)))
 
   (xpath/$x:text* "/devicestats/energy/stats" stats)
   (xpath/$x:attrs* "/devicestats/energy/stats" stats)
 
   (xpath/$x "/devicestats/temperature" stats)
+
   ;; in mW
   (req "getswitchpower" sid (:identifier device))
+
   ;; in wH
   (req "getswitchenergy" sid (:identifier (first devices)))
   (req "getswitchenergy" sid (:identifier (second devices)))
@@ -283,6 +293,3 @@
   ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
   )
-
-
-
