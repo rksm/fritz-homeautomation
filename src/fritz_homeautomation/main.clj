@@ -16,8 +16,11 @@
                                  :port 9999}
                           :server nil}))
 
+(def user (System/getenv "FRITZ_USER"))
+(def password (System/getenv "FRITZ_PASSWORD"))
+
 (defn fritz-device-stats []
-  (let [sid (fritz-api/get-sid "admin" "down8406")]
+  (let [sid (fritz-api/get-sid user password)]
     (vec (fritz-api/fetch-stats-of-all-devices sid))))
 
 (defn make-http-app [app-state]
