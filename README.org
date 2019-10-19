@@ -1,0 +1,10 @@
+* fritz homeautomation project
+
+I've got me some [FRITZ!DECT](https://avm.de/produkte/fritzdect/) outlets that
+can be remote controlled and that monitor power consumption and temperature.
+This little uses the [fritz HTTP API](https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AHA-HTTP-Interface.pdf)
+to access those features.
+
+There is currently a Clojure server that interacts with the fritz HTTP interface
+and provides it's own front end with [vega
+visualizations](https://vega.github.io/vega-lite/).
