@@ -239,7 +239,7 @@
     (def devices (fetch-device-list sid))
     (def device (first devices)))
 
-  (fetch-stats-of-all-devices sid)
+  (def all-stats (fetch-stats-of-all-devices sid))
 
   (count devices)
   (spit "test-2.xml" (req "getdevicelistinfos" sid))
