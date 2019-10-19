@@ -1,0 +1,11 @@
+^{:watch-dirs ["src"]
+  :css-dirs ["resources/public/css"]
+  :hot-reload-cljs true
+  :open-url false
+  :cljs-devtools true
+  :ansi-color-output true
+  ;; :extra-main-files {:other {:main fritz-homeautomation.other}}
+  }
+{:main fritz-homeautomation.core
+ :output-to "resources/public/cljs-out/main.js"
+ :output-dir "resources/public/cljs-out/dev"}

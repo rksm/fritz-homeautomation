@@ -1,4 +1,4 @@
-(ns fritz-box.main
+(ns fritz-homeautomation.fritz-api
   (:require [clj-http.client :as client]
             [clojure.data.xml :as xml]
             [clojure.data :as data]
@@ -6,7 +6,8 @@
             [clj-xpath.core :as xpath]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
-            [clojure.set :refer [rename-keys]])
+            [clojure.set :refer [rename-keys]]
+            [clojure.pprint :refer [pprint]])
   (:import java.security.MessageDigest
            java.math.BigInteger
            java.util.Base64))
@@ -39,7 +40,6 @@
          response (client/get url {:query-params params})
          xml (:body response)]
      xml)))
-
 
 (def default-sid "0000000000000000")
 
@@ -198,7 +198,7 @@
   [sid ain]
   (let [xml (req "getbasicdevicestats" sid ain)
         stats-map {:temperature-stats {:path "/devicestats/temperature/stats" :unit :celsius :convert #(-> % Float/parseFloat (* 0.1))}
-                   :energy-stats {:path "/devicestats/energy/stats" :unit :kwH}
+                   :energy-stats {:path "/devicestats/energy/stats" :unit :kwH :convert #(-> % Float/parseFloat (* 0.001))}
                    :power-stats {:path "/devicestats/power/stats" :unit :watts :convert #(-> % Float/parseFloat (* 0.01))}
                    :voltage-stats {:path "/devicestats/voltage/stats" :unit :volt :convert #(-> % Float/parseFloat (* 0.001))}}]
     (into {} (for [[key {:keys [path unit convert]}] stats-map]
@@ -224,6 +224,10 @@
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+(defn fetch-stats-of-all-devices [sid]
+  (for [{:keys [identifier] :as device} (fetch-device-list sid)
+        :let [stats (fetch-device-stats sid identifier)]]
+    (assoc device :stats stats)))
 
 (comment
 
@@ -232,6 +236,8 @@
     (check-sid sid)
     (def devices (fetch-device-list sid))
     (def device (first devices)))
+
+  (fetch-stats-of-all-devices sid)
 
   (count devices)
   (spit "test-2.xml" (req "getdevicelistinfos" sid))
@@ -258,6 +264,8 @@ stats
 
   (def stats (fetch-device-stats sid (-> devices second :identifier)))
   (def stats (fetch-device-stats sid (-> devices first :identifier)))
+  (pprint (-> stats :temperature-stats))
+  (pprint (-> stats :power-stats))
 
   (xpath/$x:text* "/devicestats/energy/stats" stats)
   (xpath/$x:attrs* "/devicestats/energy/stats" stats)
