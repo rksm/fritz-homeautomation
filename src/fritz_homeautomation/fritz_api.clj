@@ -232,7 +232,9 @@
 (comment
 
   (do
-    (def sid (get-sid "admin" "down8406"))
+    (def user (System/getenv "FRITZ_USER"))
+    (def password (System/getenv "FRITZ_PASSWORD"))
+    (def sid (get-sid user password))
     (check-sid sid)
     (def devices (fetch-device-list sid))
     (def device (first devices)))
