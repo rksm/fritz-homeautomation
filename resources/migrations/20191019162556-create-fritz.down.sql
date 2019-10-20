@@ -1,1 +1,5 @@
-drop table if exists hello;
+drop table if exists watts;
+--;;
+drop table if exists temperature;
+--;;
+drop table if exists device;

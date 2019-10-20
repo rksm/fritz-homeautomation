@@ -3,14 +3,65 @@
             [taoensso.timbre :as timbre]
             [clojure.java.classpath :as cp]
             [clojure.pprint :refer [pprint]]
-            [migratus.core :as migratus]))
+            [migratus.core :as migratus]
+            [com.stuartsierra.component :as component]
+            [next.jdbc.sql :as sql]))
+
+
+(def db {:dbtype "postgresql"
+         :dbname "fritz_data"
+         :user (System/getenv "PGUSER")
+         :password (System/getenv "PGPASSWORD")
+         ;; :host "localhost"
+         :host "192.168.178.30"
+         :port 5432})
+
+(def ^:dynamic *connection* nil)
+
+(defmacro with-connection
+  [& body]
+  `(with-bindings {#'*connection* (.getConnection (jdbc/get-datasource ~db))}
+     (assert (not (.isClosed *connection*)) "db connection could not be established")
+     (try
+       ~@body
+       (finally
+         (.close *connection*)))))
+
+(defn execute! [query]
+  (if-let [con *connection*]
+    (jdbc/execute! con query)
+    (throw (Exception. "no database connection"))))
+
+(defn insert-multi! [table cols rows]
+  (if-let [con *connection*]
+    (sql/insert-multi! con table cols rows)
+    (throw (Exception. "no database connection"))))
+
+(defn ensure-device! [device]
+  (let [{:keys [name identifier]} device]
+    (execute! ["
+INSERT INTO device (name, identifier)
+VALUES (?, ?)
+ON CONFLICT (identifier)
+DO NOTHING " name identifier])))
+
+(defn insert-watts! [watts]
+  (insert-multi! :watts
+                 [:device_id :watt :time]
+                 watts))
+
+(defn insert-temps! [temps]
+  (insert-multi! :temperature
+                 [:device_id :temp :time]
+                 temps))
 
 
 (comment
+
   (def db {:dbtype "postgresql"
            ;; :dbname "test"
            :user "postgres"
-           :password "tebor1"
+           :password "xxx"
            :host "localhost"
            :port 5432})
 
@@ -18,87 +69,31 @@
   (def con (.getConnection ds))
   (.close con)
 
-  (jdbc/execute! ds ["
+  (jdbc/execute! ds [(format "
 CREATE USER fritz;
 CREATE DATABASE fritz_data;
 GRANT ALL PRIVILEGES ON DATABASE fritz_data TO fritz;
-ALTER USER fritz WITH PASSWORD 'fritz';
-"]))
+ALTER USER fritz WITH PASSWORD '%s';
+" (System/getenv "PGPASSWORD"))])
+
+  )
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-(def db {:dbtype "postgresql"
-         :dbname "fritz_data"
-         :user "fritz"
-         :password "fritz"
-         :host "localhost"
-         :port 5432})
+(def migration-config {:store                :database
+                       :migration-table-name "migrations"
+                       :migration-dir        "migrations/"
+                       :init-script          "init.sql"
+                       :init-in-transaction? false
+                       :db db})
 
-(def ds (jdbc/get-datasource db))
-(def con (.getConnection ds))
-
-
-(jdbc/execute! ds ["
-create table if not exists hello (
-  id SERIAL,
-  name varchar(32),
-  email varchar(255)
-)"])
-
-(do
- (jdbc/execute! ds ["
-  insert into hello(name,email)
-  values('Sean Corfield','sean@corfield.org')"])
-
- (jdbc/execute! ds ["
-  insert into hello(name,email)
-  values('Robert Krahn','robert@kra.hn'),
-        ('Robert Krahn','robert.krahn@gmail.com')"]))
-
-(jdbc/execute! ds ["
-WITH uniq AS
-  (select distinct on (email) * from hello)
-select * from uniq;"])
-
-(jdbc/execute! ds ["
-WITH uniq AS
-  (select distinct on (email) * from hello)
-delete from hello where hello.id not in (select id from uniq);"])
-
-(jdbc/execute! ds ["select distinct on (email) * from hello"])
-
-(pprint (jdbc/execute! ds ["select * from hello"]))
-(jdbc/execute! ds ["select * from hello where name = ?" "Robert Krahn"])
-
-(reduce (fn [all it] (conj all (:hello/email it))) [] (jdbc/plan ds ["select * from hello where name = ?" "Robert Krahn"]))
-
-(into #{}
-      (map :hello/email)
-      (jdbc/plan ds ["select * from hello where name = ?" "Robert Krahn"]))
-
-(jdbc/execute-one! ds ["select * from hello"])
-
-
-;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-(def config {:store                :database
-             :migration-table-name "migrations"
-             :migration-dir        "migrations/"
-             :init-script          "init.sql"
-             :init-in-transaction? false
-             :db {:dbtype "postgresql"
-                  :dbname "fritz_data"
-                  :user "fritz"
-                  :password "fritz"
-                  :host "localhost"
-                  :port 5432}})
-
-;initialize the database using the 'init.sql' script
-(migratus/init config)
-
-;apply pending migrations
-(migratus/migrate config)
-(migratus/rollback config)
-
+;; initialize the database using the 'init.sql' script
 ;; (migratus/create config "create-fritz")
+(comment
+ (migratus/init migration-config)
+ (migratus/migrate migration-config)
+ (migratus/rollback migration-config))
 
+(defn migrate-fwd! []
+  (migratus/init migration-config)
+  (migratus/migrate migration-config))

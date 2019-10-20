@@ -44,6 +44,8 @@
 (def default-sid "0000000000000000")
 
 (defn get-sid [user password]
+  (when (not user) (throw (Exception. "[fritz api get-sid] No user name provided")))
+  (when (not password) (throw (Exception. "[fritz api get-sid] No password provided")))
   (let [{:keys [status body]} (client/get "http://fritz.box/login_sid.lua")]
     (if (>= status 300)
       (throw (Exception. (format "fritz.box not up? HTTP status: %s" status)))

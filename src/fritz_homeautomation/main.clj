@@ -7,7 +7,8 @@
             [ring.middleware.stacktrace :refer [wrap-stacktrace]]
             [ring.util.response :as response]
             [clojure.java.browse :as browse]
-            [fritz-homeautomation.fritz-api :as fritz-api]))
+            [fritz-homeautomation.fritz-api :as fritz-api]
+            [fritz-homeautomation.scratch :as scratch]))
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -16,8 +17,8 @@
                                  :port 9999}
                           :server nil}))
 
-(def user (System/getenv "FRITZ_USER"))
-(def password (System/getenv "FRITZ_PASSWORD"))
+(defonce user (System/getenv "FRITZ_USER"))
+(defonce password (System/getenv "FRITZ_PASSWORD"))
 
 (defn fritz-device-stats []
   (let [sid (fritz-api/get-sid user password)]
@@ -74,7 +75,9 @@
     (start-server! app-state)
     (println (format "Server started at %s" url))
     (when openbrowser?
-      (browse/browse-url url))))
+      (browse/browse-url url)))
+
+  (scratch/start!))
 
 (comment
   (stop-server! app-state)

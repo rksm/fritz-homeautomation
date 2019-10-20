@@ -6,8 +6,7 @@
             nrepl.core
             nrepl.server
             [refactor-nrepl.middleware :refer [wrap-refactor]]
-            sc.api.logging
-            [fritz-homeautomation.main :as main]))
+            sc.api.logging))
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -18,7 +17,7 @@
                           wrap-refactor)
         handler (apply nrepl.server/default-handler middlewares)]
     (pprint middlewares)
-    (reset! clj-nrepl-server (nrepl.server/start-server :handler handler :port 7888)))
+    (reset! clj-nrepl-server (nrepl.server/start-server :handler handler :port 7888 :bind "0.0.0.0")))
   (cl-format true "clj nrepl server started~%"))
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -33,7 +32,7 @@
                      (map resolve cider.nrepl/cider-middleware)
                      #'cider.piggieback/wrap-cljs-repl)
         handler (apply nrepl.server/default-handler middlewares)]
-    (reset! cljs-nrepl-server (nrepl.server/start-server :handler handler :port 7889)))
+    (reset! cljs-nrepl-server (nrepl.server/start-server :handler handler :port 7889 :bind "0.0.0.0")))
   (cl-format true "cljs nrepl server started~%"))
 
 (defn start-cljs-nrepl-client []
@@ -65,9 +64,6 @@
   (sc.api.logging/register-cs-logger :sc.api.logging/log-spy-cs (fn [cs] nil))
   (start-clj-nrepl-server)
   (start-cljs-nrepl-server)
-
-  (main/-main)
-
   ;; (start-cljs-nrepl-client)
   ;; (cljs-send-eval "(require 'figwheel.main) (figwheel.main/start :fig)")
   )
