@@ -8,7 +8,7 @@
             [ring.util.response :as response]
             [clojure.java.browse :as browse]
             [fritz-homeautomation.fritz-api :as fritz-api]
-            [fritz-homeautomation.scratch :as scratch]))
+            [fritz-homeautomation.fritz-observer :as fritz-observer]))
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -77,7 +77,7 @@
     (when openbrowser?
       (browse/browse-url url)))
 
-  (scratch/start!))
+  (fritz-observer/start!))
 
 (comment
   (stop-server! app-state)
