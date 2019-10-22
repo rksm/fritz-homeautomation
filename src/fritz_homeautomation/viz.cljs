@@ -22,6 +22,18 @@
                             (.catch js/console.error))
                         (reagent/atom nil)))
 
+(defn fetch-fritz-db-stats []
+  (-> (js/fetch "/fritz-db-stats")
+      (.then #(.text %))
+      (.then edn/read-string)))
+
+(defonce db-stats (do
+                    (-> (fetch-fritz-db-stats)
+                        (.then #(reset! db-stats %))
+                        (.then #(js/console.log "db done"))
+                        (.catch js/console.error))
+                    (reagent/atom nil)))
+
 ;; (first @device-stats)
 
 (defn time-seconds-ago [time-now secs]
@@ -52,7 +64,26 @@
                                  :width (- js/document.body.clientWidth 110)
                                  :title title}]))
 
-(defn render-device [time-now {:keys [name watts voltage celsius stats energy-usage-in-wh features] :as device}]
+
+(defn render-db-stat [db-stats {:keys [identifier] :as device} kind time key-sym unit]
+  (if-let [values (some-> db-stats (get time) (get kind) (get identifier))]
+    ^{:key (str identifier "-" kind time)}
+    [oz/vega-lite {:data {:values values}
+                   :mark "area"
+                   :encoding {:x {:field "time"
+                                  :type "temporal"}
+                              :y {:field (name key-sym)
+                                  :type "quantitative"
+                                  :scale {:zero false :nice true}
+                                  :title (str unit)}}
+                   :width (- js/document.body.clientWidth 110)}]
+    ^{:key (str identifier "-" kind time)}
+    [:div "loading"]))
+
+(defn render-device
+  [time-now {:keys [name watts voltage celsius stats energy-usage-in-wh features] :as device}]
+  (def device device)
+
   [:div.device name
    [:ul
     [:li (cl-format nil "power now: ~,2F watts" watts)]
@@ -65,10 +96,28 @@
     (doall (for [[key stats] stats
                  :let [kind (second (re-find #"(.*)-stats$" (.-name key)))]
                  stat stats]
-             (render-stats time-now kind stat)))]])
+             (render-stats time-now kind stat)))]
+   [:div "stored data"
+    [:div "temperature"
+     [:div "today" (render-db-stat @db-stats device :temps :today :temp "\u00B0C")]
+     [:div "yesterday" (render-db-stat @db-stats device :temps :yesterday :temp "\u00B0C")]
+     [:div "this week" (render-db-stat @db-stats device :temps :this-week :temp "\u00B0C")]
+     [:div "this month" (render-db-stat @db-stats device :temps :this-month :temp "\u00B0C")]]
+    [:div "power"
+     [:div "today" (render-db-stat @db-stats device :watts :today :watt "W")]
+     [:div "yesterday" (render-db-stat @db-stats device :watts :yesterday :watt "W")]
+     [:div "this week" (render-db-stat @db-stats device :watts :this-week :watt "W")]
+     [:div "this month" (render-db-stat @db-stats device :watts :this-month :watt "W")]]]])
 
 
 (defn viz [state]
   [:div (doall (for [device @device-stats]
                  ^{:key (str "fritz-device-" (:id device))}
                  [render-device (t/time-now) device]))])
+
+
+
+;; (render-db-stat @db-stats device :temps :today :temp "\u00B0C")
+
+;; [:today :yesterday :this-week :this-month]
+

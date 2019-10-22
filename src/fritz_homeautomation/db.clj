@@ -8,13 +8,15 @@
             [next.jdbc.sql :as sql]))
 
 
-(def db {:dbtype "postgresql"
-         :dbname "fritz_data"
-         :user (System/getenv "PGUSER")
-         :password (System/getenv "PGPASSWORD")
-         ;; :host "localhost"
-         :host "192.168.178.30"
-         :port 5432})
+(defonce db {:dbtype "postgresql"
+             :dbname "fritz_data"
+             :user "fritz"
+             :password "fritz"
+             ;; :user (System/getenv "PGUSER")
+             ;; :password (System/getenv "PGPASSWORD")
+             :host "localhost"
+             ;; :host "192.168.178.30"
+             :port 5432})
 
 (def ^:dynamic *connection* nil)
 

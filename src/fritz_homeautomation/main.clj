@@ -8,7 +8,8 @@
             [ring.util.response :as response]
             [clojure.java.browse :as browse]
             [fritz-homeautomation.fritz-api :as fritz-api]
-            [fritz-homeautomation.fritz-observer :as fritz-observer]))
+            [fritz-homeautomation.fritz-observer :as fritz-observer]
+            [fritz-homeautomation.db-access :as db]))
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -24,10 +25,14 @@
   (let [sid (fritz-api/get-sid user password)]
     (vec (fritz-api/fetch-stats-of-all-devices sid))))
 
+(defn fritz-db-stats []
+  (db/query-some!))
+
 (defn make-http-app [app-state]
   (let [main-routes
         (routes
          (GET "/fritz-device-stats" [] (pr-str (fritz-device-stats)))
+         (GET "/fritz-db-stats" [] (pr-str (fritz-db-stats)))
          (GET "/" [] (response/resource-response "public/index.html"))
          (GET "/index.html" [] (response/redirect "/"))
          (route/resources "/" {:root "public"})

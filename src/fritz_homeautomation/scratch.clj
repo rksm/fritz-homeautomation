@@ -1,7 +1,6 @@
 (ns fritz-homeautomation.scratch
   (:require [fritz-homeautomation.fritz-api :refer [check-sid fetch-device-list fetch-stats-of-all-devices get-sid]]
-            [clj-time.core :as t]
-            [clj-time.format :as tf]
+            [java.time :as t]
             [fritz-homeautomation.db :as db]
             [com.rpl.specter :as s :refer [transform ALL MAP-VALS MAP-KEYS]]
             [clojure.set :refer [rename-keys]]
