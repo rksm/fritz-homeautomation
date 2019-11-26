@@ -143,8 +143,6 @@ WHERE %s.time = newest.time AND
  (do
    (def user (System/getenv "FRITZ_USER"))
    (def password (System/getenv "FRITZ_PASSWORD"))
-   (def user "admin")
-   (def password "down8406")
    (def sid (get-sid user password))
    (def all-stats (fetch-stats-of-all-devices sid)))
 
