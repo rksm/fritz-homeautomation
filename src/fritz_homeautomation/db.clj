@@ -10,12 +10,9 @@
 
 (defonce db {:dbtype "postgresql"
              :dbname "fritz_data"
-             :user "fritz"
-             :password "fritz"
-             ;; :user (System/getenv "PGUSER")
-             ;; :password (System/getenv "PGPASSWORD")
-             :host "localhost"
-             ;; :host "192.168.178.30"
+             :user (System/getenv "PGUSER")
+             :password (System/getenv "PGPASSWORD")
+             :host (System/getenv "PGHOST")
              :port 5432})
 
 (def ^:dynamic *connection* nil)
