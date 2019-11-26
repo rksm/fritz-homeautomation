@@ -46,7 +46,7 @@
             (try [key (tf/unparse f (t/time-now))] (catch js/Error e [key e])))))
 
 
-(defn render-stats [time-now kind {:keys [interval-seconds unit stat-values] :as stat}]
+(defn render-stats [time-now kind {:keys [interval-seconds unit stat-values] :as _stat}]
   (let [duration (humanize/duration (* 1000 interval-seconds))
         unit (name unit)
         title (cl-format nil "~a / ~a" kind duration)
@@ -65,7 +65,7 @@
                                  :title title}]))
 
 
-(defn render-db-stat [db-stats {:keys [identifier] :as device} kind time key-sym unit]
+(defn render-db-stat [db-stats {:keys [identifier] :as _device} kind time key-sym unit]
   (if-let [values (some-> db-stats (get time) (get kind) (get identifier))]
     ^{:key (str identifier "-" kind time)}
     [oz/vega-lite {:data {:values values}
@@ -82,8 +82,6 @@
 
 (defn render-device
   [time-now {:keys [name watts voltage celsius stats energy-usage-in-wh features] :as device}]
-  (def device device)
-
   [:div.device name
    [:ul
     [:li (cl-format nil "power now: ~,2F watts" watts)]
@@ -110,7 +108,7 @@
      [:div "this month" (render-db-stat @db-stats device :watts :this-month :watt "W")]]]])
 
 
-(defn viz [state]
+(defn viz [_state]
   [:div (doall (for [device @device-stats]
                  ^{:key (str "fritz-device-" (:id device))}
                  [render-device (t/time-now) device]))])
