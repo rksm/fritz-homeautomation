@@ -9,7 +9,8 @@
             [clojure.java.browse :as browse]
             [fritz-homeautomation.fritz-api :as fritz-api]
             [fritz-homeautomation.fritz-observer :as fritz-observer]
-            [fritz-homeautomation.db-access :as db]))
+            [fritz-homeautomation.db-access :as db]
+            [fritz-homeautomation.db]))
 
 ;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -81,6 +82,8 @@
     (println (format "Server started at %s" url))
     (when openbrowser?
       (browse/browse-url url)))
+
+  (fritz-homeautomation.db/test-connection-and-exit-on-failure!)
 
   (fritz-observer/start!))
 

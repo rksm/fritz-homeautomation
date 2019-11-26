@@ -57,6 +57,13 @@ DO NOTHING " name identifier])))
                  [:device_id :temp :time]
                  temps))
 
+(defn test-connection-and-exit-on-failure! []
+  (try
+    (with-connection (execute! ["select 1"]))
+    (catch Exception e
+      (println (format "connection to %s\nfailed: %s" db e))
+      (System/exit 1))))
+
 
 (comment
 
